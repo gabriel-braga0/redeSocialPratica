@@ -1,0 +1,25 @@
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Spring Boot-NotificationsApplication<notifications>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.redesocial.notifications.NotificationsApplication",
+      "projectName": "notifications",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env",
+      "vmArgs": " -Dcom.sun.management.jmxremote"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-RedesocialApplication<redesocial>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.redesocial.RedesocialApplication",
+      "projectName": "redesocial",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}
