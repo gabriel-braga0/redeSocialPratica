@@ -5,6 +5,9 @@ FROM openjdk:21-jdk
 WORKDIR /app
 
 COPY wait-for-it.sh /wait-for-it.sh
+
+ENV SPRING_PROFILES_ACTIVE=docker
+
 RUN chmod +x /wait-for-it.sh
 
 # Copia o arquivo JAR para dentro do container
