@@ -36,7 +36,11 @@ public class CommentService {
         Comment comment = new Comment(commentDTO, user);
         comment.setPost(postRepository.findById(idPost).get());
         comment = commentRepository.save(comment);
-        producer.enviarNotificacao("comment", comment.getPost().getId().toString());
+        try {
+            producer.enviarNotificacao("comment", comment.getPost().getId().toString());
+        } catch (RuntimeException e) {
+            System.err.println("Kafka indisponível.");
+        }
         return new CommentDTO(comment);
     }
 }
