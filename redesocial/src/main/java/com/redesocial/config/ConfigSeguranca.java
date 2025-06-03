@@ -5,6 +5,7 @@ import com.redesocial.repository.UsuarioRepository;
 import com.redesocial.security.JwtAuthenticationFilter;
 import com.redesocial.security.JwtAuthorizationFilter;
 import com.redesocial.security.JwtUtil;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -71,15 +72,28 @@ public class ConfigSeguranca {
 						.requestMatchers("/api/auth/login").permitAll()
 						.requestMatchers(HttpMethod.POST, "/user").permitAll()
 						.requestMatchers("/login/oauth2/code/**", "/oauth2/**").permitAll()
-						.anyRequest().authenticated())
+						.requestMatchers("/user/**").authenticated()
+						.requestMatchers("/post/**").authenticated()
+						.requestMatchers("/comment/**").authenticated()
+						.anyRequest().permitAll())
 				.oauth2Login(oauth2 -> oauth2
 						.userInfoEndpoint(userInfo -> userInfo
 								.userService(oauth2UserService()))
-						.successHandler(oauth2AuthenticationSuccessHandler()))
-				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+						.successHandler(oauth2AuthenticationSuccessHandler())
 
-				.addFilter(jwtAuthenticationFilter)
-				.addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class);
+				)
+				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //
+				.exceptionHandling(exceptionHandling -> exceptionHandling
+						.authenticationEntryPoint((request, response, authException) -> {
+							response.setContentType("application/json;charset=UTF-8");
+							response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+							response.getWriter()
+									.write("{\"status\": 401, \"error\": \"Não autorizado\", \"message\": \""
+											+ authException.getMessage() + "\", \"path\": \"" + request.getRequestURI()
+											+ "\"}");
+						}))
+				.addFilter(jwtAuthenticationFilter) //
+				.addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class); //
 
 		return http.build();
 	}
@@ -97,11 +111,16 @@ public class ConfigSeguranca {
 					novoUsuario.setEmail(email);
 					novoUsuario.setNome(oauth2User.getAttribute("given_name"));
 					novoUsuario.setSobrenome(oauth2User.getAttribute("family_name"));
+					novoUsuario.setSenha(bCryptPasswordEncoder().encode(java.util.UUID.randomUUID().toString()));
 					usuarioRepository.save(novoUsuario);
 				} else {
 					Usuario usuarioExistente = usuarioOpt.get();
 					usuarioExistente.setNome(oauth2User.getAttribute("given_name"));
 					usuarioExistente.setSobrenome(oauth2User.getAttribute("family_name"));
+					if (usuarioExistente.getSenha() == null || usuarioExistente.getSenha().isEmpty()) {
+						usuarioExistente
+								.setSenha(bCryptPasswordEncoder().encode(java.util.UUID.randomUUID().toString()));
+					}
 					usuarioRepository.save(usuarioExistente);
 				}
 			}
@@ -116,14 +135,8 @@ public class ConfigSeguranca {
 			String email = oauth2User.getAttribute("email");
 
 			Usuario usuario = usuarioRepository.findByEmail(email)
-					.orElseGet(() -> {
-
-						Usuario novoUsuario = new Usuario();
-						novoUsuario.setEmail(email);
-						novoUsuario.setNome(oauth2User.getAttribute("given_name"));
-						novoUsuario.setSobrenome(oauth2User.getAttribute("family_name"));
-						return usuarioRepository.save(novoUsuario);
-					});
+					.orElseThrow(() -> new IllegalStateException(
+							"Usuário OAuth2 não encontrado no banco após processamento: " + email));
 
 			String token = jwtUtil.generateToken(usuario.getEmail());
 			response.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
@@ -142,7 +155,6 @@ public class ConfigSeguranca {
 	CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration corsConfiguration = new CorsConfiguration();
 		corsConfiguration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
-
 		corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "DELETE", "PUT", "OPTIONS"));
 		corsConfiguration.setAllowedHeaders(
 				Arrays.asList(HttpHeaders.AUTHORIZATION, HttpHeaders.CONTENT_TYPE, HttpHeaders.ACCEPT));
