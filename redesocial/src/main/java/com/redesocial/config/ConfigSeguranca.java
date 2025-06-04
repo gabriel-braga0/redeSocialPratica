@@ -25,6 +25,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -60,7 +61,8 @@ public class ConfigSeguranca {
 	public SecurityFilterChain filterChain(HttpSecurity http,
 			AuthenticationManager authenticationManager) throws Exception {
 
-		JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(authenticationManager, jwtUtil);
+		JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(authenticationManager, jwtUtil,
+				usuarioRepository);
 		jwtAuthenticationFilter.setFilterProcessesUrl("/api/auth/login");
 
 		JwtAuthorizationFilter jwtAuthorizationFilter = new JwtAuthorizationFilter(authenticationManager, jwtUtil,
@@ -72,6 +74,7 @@ public class ConfigSeguranca {
 						.requestMatchers("/api/auth/login").permitAll()
 						.requestMatchers(HttpMethod.POST, "/user").permitAll()
 						.requestMatchers("/login/oauth2/code/**", "/oauth2/**").permitAll()
+						.requestMatchers("/api/auth/google/exchange-code").permitAll()
 						.requestMatchers("/user/**").authenticated()
 						.requestMatchers("/post/**").authenticated()
 						.requestMatchers("/comment/**").authenticated()
@@ -165,5 +168,10 @@ public class ConfigSeguranca {
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", corsConfiguration);
 		return source;
+	}
+
+	@Bean
+	public RestTemplate restTemplate() {
+		return new RestTemplate();
 	}
 }
